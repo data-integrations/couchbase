@@ -33,7 +33,24 @@
         {
           "widget-type": "textbox",
           "label": "Conditions",
-          "name": "conditions"
+          "name": "conditions",
+          "plugin-function": {
+            "widget": "outputSchema",
+            "output-property": "schema",
+            "omit-properties": [
+              {
+                "name": "schema"
+              }
+            ]
+          }
+        },
+        {
+          "widget-type": "number",
+          "label": "Number of Splits",
+          "name": "numSplits",
+          "widget-attributes": {
+            "default": "0"
+          }
         }
       ]
     },
@@ -76,6 +93,14 @@
                 "label": "Fail pipeline"
               }
             ]
+          }
+        },
+        {
+          "widget-type": "number",
+          "label": "Sample Size",
+          "name": "sampleSize",
+          "widget-attributes": {
+            "default": "1000"
           }
         },
         {

@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 
@@ -62,6 +63,13 @@ public class CouchbaseSourceConfig extends CouchbaseConfig {
   @Nullable
   private String conditions;
 
+  @Name(CouchbaseConstants.NUM_SPLITS)
+  @Description("Desired number of splits to divide the query into when reading from Couchbase. Fewer splits may be " +
+    "created if the query cannot be divided into the desired number of splits. If the specified value is zero, the " +
+    "plugin will use the number of map tasks as the number of splits.")
+  @Macro
+  private int numSplits;
+
   @Name(CouchbaseConstants.ON_ERROR)
   @Description("Specifies how to handle error in record processing. Error will be thrown if failed to parse value " +
     "according to provided schema.")
@@ -70,7 +78,15 @@ public class CouchbaseSourceConfig extends CouchbaseConfig {
 
   @Name(CouchbaseConstants.SCHEMA)
   @Description("Schema of records output by the source.")
+  @Nullable
   private String schema;
+
+  @Name(CouchbaseConstants.SAMPLE_SIZE)
+  @Description("Configuration property name used to specify the number of documents to randomly sample in the " +
+    "bucket when inferring the schema. The default sample size is 1000 documents. If a bucket contains fewer " +
+    "documents than the specified number, then all the documents in the bucket will be used.")
+  @Macro
+  private int sampleSize;
 
   @Name(CouchbaseConstants.MAX_PARALLELISM)
   @Description("Maximum number of CPU cores to be used to process a query. If the specified value is less " +
@@ -89,13 +105,15 @@ public class CouchbaseSourceConfig extends CouchbaseConfig {
   private int timeout;
 
   public CouchbaseSourceConfig(String referenceName, String nodes, String bucket, String user, String password,
-                               String selectFields, String conditions, String onError, String schema,
-                               int maxParallelism, String consistency, int timeout) {
+                               String selectFields, String conditions, int numSplits, String onError, String schema,
+                               int sampleSize, int maxParallelism, String consistency, int timeout) {
     super(referenceName, nodes, bucket, user, password);
     this.selectFields = selectFields;
     this.conditions = conditions;
+    this.numSplits = numSplits;
     this.onError = onError;
     this.schema = schema;
+    this.sampleSize = sampleSize;
     this.maxParallelism = maxParallelism;
     this.consistency = consistency;
     this.timeout = timeout;
@@ -110,12 +128,21 @@ public class CouchbaseSourceConfig extends CouchbaseConfig {
     return conditions;
   }
 
+  public int getNumSplits() {
+    return numSplits;
+  }
+
   public String getOnError() {
     return onError;
   }
 
+  @Nullable
   public String getSchema() {
     return schema;
+  }
+
+  public int getSampleSize() {
+    return sampleSize;
   }
 
   public int getMaxParallelism() {
@@ -151,7 +178,7 @@ public class CouchbaseSourceConfig extends CouchbaseConfig {
   }
 
   public List<String> getSelectFieldsList() {
-    return Arrays.asList(getSelectFields().split(","));
+    return Arrays.stream(getSelectFields().split(",")).map(String::trim).collect(Collectors.toList());
   }
 
   public Consistency getScanConsistency() {
@@ -173,6 +200,12 @@ public class CouchbaseSourceConfig extends CouchbaseConfig {
     if (!containsMacro(CouchbaseConstants.SELECT_FIELDS) && Strings.isNullOrEmpty(selectFields)) {
       collector.addFailure("Select fields must be specified", null)
         .withConfigProperty(CouchbaseConstants.SELECT_FIELDS);
+    }
+    if (!containsMacro(CouchbaseConstants.NUM_SPLITS)) {
+      if (numSplits < 0) {
+        collector.addFailure("Number of splits must be greater than or equal to 0", null)
+          .withConfigProperty(CouchbaseConstants.NUM_SPLITS);
+      }
     }
     if (!containsMacro(CouchbaseConstants.ON_ERROR)) {
       if (Strings.isNullOrEmpty(onError)) {
@@ -199,12 +232,13 @@ public class CouchbaseSourceConfig extends CouchbaseConfig {
           .withConfigProperty(CouchbaseConstants.QUERY_TIMEOUT);
       }
     }
-    // TODO Couchbase Server 4.5 introduces INFER, a N1QL statement that infers the metadata of documents.
-    // This can be used to infer the Output Schema.
-    if (!containsMacro(CouchbaseConstants.SCHEMA) && Strings.isNullOrEmpty(schema)) {
-      collector.addFailure("Output schema must be specified", null)
-        .withConfigProperty(CouchbaseConstants.SCHEMA);
-    } else if (!containsMacro(CouchbaseConstants.SCHEMA)) {
+    if (!containsMacro(CouchbaseConstants.SAMPLE_SIZE)) {
+      if (sampleSize < 1) {
+        collector.addFailure("Sample size must be greater than 0", null)
+          .withConfigProperty(CouchbaseConstants.SAMPLE_SIZE);
+      }
+    }
+    if (!containsMacro(CouchbaseConstants.SCHEMA) && !Strings.isNullOrEmpty(schema)) {
       Schema parsedSchema = getParsedSchema();
       validateSchema(parsedSchema, collector);
     }

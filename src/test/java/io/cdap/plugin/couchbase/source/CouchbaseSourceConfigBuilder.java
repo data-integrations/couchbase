@@ -25,11 +25,15 @@ import javax.annotation.Nullable;
 public class CouchbaseSourceConfigBuilder extends CouchbaseConfigBuilder<CouchbaseSourceConfigBuilder> {
 
   private String selectFields;
+  private int numSplits;
   private String onError;
-  private String schema;
+  private int sampleSize;
   private int maxParallelism;
   private String scanConsistency;
   private int timeout;
+
+  @Nullable
+  private String schema;
 
   @Nullable
   private String conditions;
@@ -45,9 +49,11 @@ public class CouchbaseSourceConfigBuilder extends CouchbaseConfigBuilder<Couchba
       .setBucket(original.getBucket())
       .setSelectFields(original.getSelectFields())
       .setConditions(original.getConditions())
+      .setNumSplits(original.getNumSplits())
       .setUser(original.getUser())
       .setPassword(original.getPassword())
       .setOnError(original.getOnError())
+      .setSampleSize(original.getSampleSize())
       .setMaxParallelism(original.getMaxParallelism())
       .setScanConsistency(original.getConsistency())
       .setQueryTimeout(original.getTimeout())
@@ -64,8 +70,18 @@ public class CouchbaseSourceConfigBuilder extends CouchbaseConfigBuilder<Couchba
     return this;
   }
 
+  public CouchbaseSourceConfigBuilder setNumSplits(int numSplits) {
+    this.numSplits = numSplits;
+    return this;
+  }
+
   public CouchbaseSourceConfigBuilder setOnError(String onError) {
     this.onError = onError;
+    return this;
+  }
+
+  public CouchbaseSourceConfigBuilder setSampleSize(int sampleSize) {
+    this.sampleSize = sampleSize;
     return this;
   }
 
@@ -84,13 +100,13 @@ public class CouchbaseSourceConfigBuilder extends CouchbaseConfigBuilder<Couchba
     return this;
   }
 
-  public CouchbaseSourceConfigBuilder setSchema(String schema) {
+  public CouchbaseSourceConfigBuilder setSchema(@Nullable String schema) {
     this.schema = schema;
     return this;
   }
 
   public CouchbaseSourceConfig build() {
     return new CouchbaseSourceConfig(referenceName, nodes, bucket, user, password, selectFields, conditions,
-                                     onError, schema, maxParallelism, scanConsistency, timeout);
+                                     numSplits, onError, schema, sampleSize, maxParallelism, scanConsistency, timeout);
   }
 }
